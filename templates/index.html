@@ -1,0 +1,904 @@
+{% macro token() %}
+  <input type="hidden" name="csrf" value="{{ csrf() }}">
+{% endmacro %}
+
+{% macro password_fields() %}
+  <label>
+    パスワード（12〜128文字）
+    <input
+      type="password"
+      name="password"
+      minlength="12"
+      maxlength="128"
+      autocomplete="new-password"
+      required
+    >
+  </label>
+  <label>
+    パスワードの確認
+    <input
+      type="password"
+      name="confirm"
+      minlength="12"
+      maxlength="128"
+      autocomplete="new-password"
+      required
+    >
+  </label>
+{% endmacro %}
+
+<!doctype html>
+<html lang="ja" data-theme="day">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#edf8fe">
+  <title>今日学校行く？</title>
+
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='style.css', v='sky3') }}"
+  >
+
+  <script
+    src="{{ url_for('static', filename='delete-answer.js', v='sky3') }}"
+    defer
+  ></script>
+</head>
+
+<body class="page-{{ page }}">
+  <main>
+    <header>
+      <a class="brand" href="{{ url_for('index') }}">
+        <span class="logo">☀</span>
+        今日学校行く？
+      </a>
+
+      <div class="header-note">
+        <span class="tiny">毎日の、ちいさな共有。</span>
+        <span class="theme-label" data-theme-label>
+          日本時間で自動切替
+        </span>
+      </div>
+    </header>
+
+    <section class="sky-hero" aria-label="今日学校行く？">
+      <div class="school-art" aria-hidden="true"></div>
+      <div class="hero-date" data-japan-date>日本時間</div>
+
+      <div class="hero-copy">
+        <h1>
+          <svg
+            class="people-icon"
+            viewBox="0 0 48 42"
+            aria-hidden="true"
+          >
+            <circle cx="24" cy="9" r="8"/>
+            <circle cx="8" cy="15" r="6"/>
+            <circle cx="40" cy="15" r="6"/>
+            <path d="M14 41V29a10 10 0 0 1 20 0v12zM0 38V29a8 8 0 0 1 12-7v16zM36 38V22a8 8 0 0 1 12 7v9z"/>
+          </svg>
+          今日学校行く？
+        </h1>
+        <p>
+          みんなの出欠を共有して、<br>
+          学校生活をもっと楽しく！
+        </p>
+      </div>
+    </section>
+
+    {% for message in get_flashed_messages() %}
+      <p class="notice" role="status">{{ message }}</p>
+    {% endfor %}
+
+    {% if page == 'error' %}
+
+      <section class="card">
+        <h1>操作を完了できませんでした</h1>
+        <p>{{ error.description }}</p>
+        <a class="button" href="{{ url_for('index') }}">
+          ホームへ戻る
+        </a>
+      </section>
+
+    {% elif page == 'forgot' %}
+
+      <div class="intro">
+        <p class="eyebrow">ACCOUNT RECOVERY</p>
+        <h1>パスワードを再設定</h1>
+        <p>登録したメールアドレスを入力してください。</p>
+      </div>
+
+      <section class="card">
+        <form method="post">
+          {{ token() }}
+          <label>
+            メールアドレス
+            <input
+              type="email"
+              name="email"
+              autocomplete="email"
+              maxlength="254"
+              required
+            >
+          </label>
+          <button>再設定メールを送る</button>
+        </form>
+        <a href="{{ url_for('index') }}">ログインに戻る</a>
+      </section>
+
+    {% elif page == 'reset' %}
+
+      <section class="card">
+        <h1>新しいパスワード</h1>
+        <form method="post">
+          {{ token() }}
+          {{ password_fields() }}
+          <button>パスワードを変更する</button>
+        </form>
+      </section>
+
+    {% elif page == 'register' %}
+
+      <div class="intro">
+        <p class="eyebrow">CREATE ACCOUNT</p>
+        <h1>新規登録</h1>
+        <p>登録が完了すると、そのままホームに進みます。</p>
+      </div>
+
+      <section class="card">
+        <h2>アカウント情報</h2>
+
+        {% if registration_error %}
+          <p class="notice" role="alert">
+            {{ registration_error }}
+          </p>
+        {% endif %}
+
+        <form action="{{ url_for('register') }}" method="post">
+          {{ token() }}
+
+          <label>
+            メールアドレス
+            <input
+              type="email"
+              name="email"
+              value="{{ values.get('email', '') }}"
+              autocomplete="email"
+              autocapitalize="none"
+              maxlength="254"
+              required
+            >
+          </label>
+
+          {{ password_fields() }}
+
+          <p class="small">
+            入力に問題がある場合は、この画面でお知らせします。
+            再送信するときはパスワードを再入力してください。
+          </p>
+
+          <button>登録してはじめる</button>
+        </form>
+
+        <a href="{{ url_for('index') }}">
+          登録済みの方はログインへ
+        </a>
+      </section>
+
+    {% elif not g.user %}
+
+      <div class="intro">
+        <p class="eyebrow">A LITTLE CHECK-IN, EVERY DAY</p>
+        <h1>今日、学校行く？</h1>
+        <p>
+          いつものみんなと、今日の予定を。<br>
+          出欠を答えると、みんなの回答が見られます。
+        </p>
+      </div>
+
+      <section class="card">
+        <h2>おかえりなさい</h2>
+
+        <form action="{{ url_for('login') }}" method="post">
+          {{ token() }}
+
+          <label>
+            メールアドレス
+            <input
+              type="email"
+              name="email"
+              autocomplete="username"
+              autocapitalize="none"
+              maxlength="254"
+              required
+            >
+          </label>
+
+          <label>
+            パスワード
+            <input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              maxlength="128"
+              required
+            >
+          </label>
+
+          <button>ログイン</button>
+        </form>
+
+        <a href="{{ url_for('forgot') }}">
+          パスワードを忘れた方
+        </a>
+      </section>
+
+      <section class="card">
+        <h2>はじめての方</h2>
+        <a class="button secondary" href="{{ url_for('register') }}">
+          新規登録へ進む
+        </a>
+      </section>
+
+    {% elif page == 'home' %}
+
+      <div class="intro">
+        <p class="eyebrow">{{ today }} · TODAY</p>
+        <h1>今日の予定を、<br>みんなと。</h1>
+        <p>グループごとに、出欠を教えてね。</p>
+      </div>
+
+      <div class="section-title">
+        <h2>マイグループ</h2>
+        <a href="{{ url_for('groups') }}">＋ 追加</a>
+      </div>
+
+      {% for card in cards %}
+        <a
+          class="card group-card"
+          href="{{ url_for('group', gid=card.id) }}"
+        >
+          <div class="row">
+            <span class="badge {{ 'answered' if card.answer }}">
+              {{ card.answer.status if card.answer else '未回答' }}
+            </span>
+            <span class="small">{{ card.state }}</span>
+          </div>
+
+          <h2>{{ card.name }}</h2>
+          <p>{{ card.nickname }} として参加中</p>
+
+          <div class="card-footer">
+            <span>締切 {{ card.deadline }}</span>
+            <strong>
+              {{ 'みんなの回答を見る' if card.answer else '今日の出欠を回答' }}
+              →
+            </strong>
+          </div>
+        </a>
+      {% else %}
+        <section class="card empty">
+          <span class="large-icon">☁</span>
+          <h2>最初のグループに参加しよう</h2>
+          <p>招待コードで、いつものメンバーとつながれます。</p>
+          <a class="button" href="{{ url_for('groups') }}">
+            グループを追加する
+          </a>
+        </section>
+      {% endfor %}
+
+      <p class="footnote">
+        回答したグループだけ、みんなの出欠を確認できます。
+      </p>
+
+    {% elif page == 'groups' %}
+
+      <div class="intro">
+        <p class="eyebrow">YOUR GROUPS</p>
+        <h1>いつものみんなと。</h1>
+        <p>招待コードで参加するか、新しく作りましょう。</p>
+      </div>
+
+      <section class="card">
+        <h2>招待コードで参加</h2>
+
+        <form method="post">
+          {{ token() }}
+          <input type="hidden" name="action" value="join">
+
+          <label>
+            招待コード
+            <input
+              name="invite"
+              maxlength="100"
+              autocomplete="off"
+              required
+            >
+          </label>
+
+          <label>
+            このグループでのニックネーム
+            <input name="nickname" maxlength="40" required>
+          </label>
+
+          <button>グループに参加する</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>グループを作る</h2>
+
+        <form method="post">
+          {{ token() }}
+          <input type="hidden" name="action" value="create">
+
+          <label>
+            グループ名
+            <input
+              name="name"
+              maxlength="60"
+              placeholder="例：いつもの3人"
+              required
+            >
+          </label>
+
+          <label>
+            このグループでのニックネーム
+            <input name="nickname" maxlength="40" required>
+          </label>
+
+          <p class="small">
+            作成者が管理者になります。
+            初期設定は平日・08:30締切です。
+          </p>
+
+          <button class="secondary">新しいグループを作成</button>
+        </form>
+      </section>
+
+    {% elif page == 'group' %}
+
+      <a class="back" href="{{ url_for('index') }}">← ホーム</a>
+
+      <div class="intro">
+        <p class="eyebrow">TODAY'S CHECK-IN</p>
+        <h1>{{ group.name }}</h1>
+        <p>{{ state }} · 締切 {{ group.deadline }}（日本時間）</p>
+
+        <p class="small">
+          実施：
+          {% for day in weekdays %}
+            {% if loop.index0|string in group.weekdays.split(',') %}
+              {{ day }}
+            {% endif %}
+          {% endfor %}
+          ／ 休止日：{{ group.holidays or 'なし' }}
+        </p>
+      </div>
+
+      <section class="card">
+        <div class="row">
+          <h2>
+            {{ '今日は「' ~ answer.status ~ '」' if answer else '✏ 出欠を入力' }}
+          </h2>
+          <span class="badge nickname-badge">{{ group.nickname }}</span>
+        </div>
+
+        {% if answer or state == '受付中' %}
+          <form
+            action="{{ url_for('answer', gid=group.id) }}"
+            method="post"
+          >
+            {{ token() }}
+
+            {% if not answer %}
+              <fieldset class="attendance-fieldset">
+                <legend>今日の出欠を選択してください</legend>
+
+                <div class="choices">
+                  <label class="choice choice-present">
+                    <input
+                      type="radio"
+                      name="status"
+                      value="出席"
+                      required
+                    >
+                    <span class="choice-content">
+                      <span class="choice-icon happy">
+                        <svg viewBox="0 0 48 48" aria-hidden="true">
+                          <circle cx="24" cy="24" r="23" fill="white"/>
+                          <g fill="currentColor">
+                            <circle cx="16" cy="18" r="3"/>
+                            <circle cx="32" cy="18" r="3"/>
+                          </g>
+                          <path
+                            d="M15 29q9 11 18 0"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="4"
+                            stroke-linecap="round"
+                          />
+                        </svg>
+                      </span>
+                      <strong>出席</strong>
+                      <span class="choice-description">
+                        学校に行きます！
+                      </span>
+                      <span class="choice-check" aria-hidden="true">
+                        ✓ 選択中
+                      </span>
+                    </span>
+                  </label>
+
+                  <label class="choice choice-absent">
+                    <input
+                      type="radio"
+                      name="status"
+                      value="欠席"
+                      required
+                    >
+                    <span class="choice-content">
+                      <span class="choice-icon sad">
+                        <svg viewBox="0 0 48 48" aria-hidden="true">
+                          <circle cx="24" cy="24" r="23" fill="white"/>
+                          <g fill="currentColor">
+                            <circle cx="16" cy="18" r="3"/>
+                            <circle cx="32" cy="18" r="3"/>
+                          </g>
+                          <path
+                            d="M15 34q9-11 18 0"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="4"
+                            stroke-linecap="round"
+                          />
+                        </svg>
+                      </span>
+                      <strong>欠席</strong>
+                      <span class="choice-description">
+                        学校を休みます…
+                      </span>
+                      <span class="choice-check" aria-hidden="true">
+                        ✓ 選択中
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+            {% endif %}
+
+            <label>
+              ひとこと（任意）
+              <textarea
+                name="comment"
+                maxlength="500"
+                placeholder="例：1限から行くよ！"
+              >{{ answer.comment if answer else '' }}</textarea>
+            </label>
+
+            <p class="small">
+              {% if answer %}
+                出欠を直接変更することはできません。
+                コメントは今日中なら編集できます。
+              {% else %}
+                回答とコメントがグループ内に共有されます。
+                回答後はコメントの編集と回答の削除ができます。
+              {% endif %}
+            </p>
+
+            <button>
+              {{ 'コメントを更新' if answer else 'この内容で回答する' }}
+            </button>
+          </form>
+        {% else %}
+          <p>本日の回答は受け付けていません。</p>
+        {% endif %}
+      </section>
+
+      {% if answer %}
+        <section class="card">
+          <h2>今日の回答を削除</h2>
+
+          <p class="small">
+            削除すると未回答に戻り、みんなの回答も見られなくなります。
+            締切後・休止日は再回答できません。
+          </p>
+
+          <form
+            action="{{ url_for('delete_answer', gid=group.id) }}"
+            method="post"
+            data-delete-answer
+          >
+            {{ token() }}
+
+            <button
+              type="submit"
+              class="danger"
+              data-delete-button
+              disabled
+            >
+              今日の出欠回答を削除
+            </button>
+          </form>
+
+          <noscript>
+            削除するには JavaScript を有効にしてください。
+          </noscript>
+        </section>
+      {% endif %}
+
+      <section class="card">
+        <div class="row">
+          <h2>今日の出欠状況</h2>
+          <span class="deadline-chip">◷ 締切 {{ group.deadline }}</span>
+        </div>
+
+        {% if answer %}
+          <div class="attendance-stats" aria-label="今日の集計">
+            <div class="stat present">
+              <span aria-hidden="true">☺</span>
+              <div>
+                出席
+                <strong>
+                  {{ people|selectattr('status', 'equalto', '出席')|list|length }}<small>人</small>
+                </strong>
+              </div>
+            </div>
+
+            <div class="stat absent">
+              <span aria-hidden="true">☹</span>
+              <div>
+                欠席
+                <strong>
+                  {{ people|selectattr('status', 'equalto', '欠席')|list|length }}<small>人</small>
+                </strong>
+              </div>
+            </div>
+
+            <div class="stat waiting">
+              <span aria-hidden="true">♟</span>
+              <div>
+                未回答
+                <strong>
+                  {{ people|selectattr('status', 'equalto', '未回答')|list|length }}<small>人</small>
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="members-heading">♟ 回答したメンバー</h3>
+
+          {% for person in people if person.status != '未回答' %}
+            <article class="person {{ 'is-present' if person.status == '出席' else 'is-absent' }}">
+              <div class="row">
+                <strong>{{ person.nickname }}</strong>
+                <span class="badge {{ 'answered' if person.status == '出席' }}">
+                  {{ person.status }}
+                </span>
+              </div>
+
+              {% if person.comment %}
+                <p class="comment">{{ person.comment }}</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+
+          <h3 class="members-heading">
+            ♟ まだ回答していないメンバー
+          </h3>
+
+          {% for person in people if person.status == '未回答' %}
+            <article class="person">
+              <div class="row">
+                <strong>{{ person.nickname }}</strong>
+                <span class="badge">未回答</span>
+              </div>
+            </article>
+          {% else %}
+            <p class="small">全員回答済みです。</p>
+          {% endfor %}
+
+        {% else %}
+          <div class="empty">
+            <span class="large-icon">◇</span>
+            <p>あなたの回答後に表示されます。</p>
+            <small>まずは、自分の今日の予定を。</small>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="card" aria-labelledby="member-list-heading">
+        <div class="row">
+          <h2 id="member-list-heading">メンバー一覧</h2>
+          <span class="badge">
+            参加人数 {{ group_members|length }}人
+          </span>
+        </div>
+
+        <p class="small">
+          このグループに参加しているメンバーです。
+        </p>
+
+        <div role="list" aria-label="参加メンバー">
+          {% for participant in group_members %}
+            <div class="person" role="listitem">
+              <div class="row">
+                <strong>{{ participant.nickname }}</strong>
+                <span class="badge {{ 'answered' if participant.role == 'admin' }}">
+                  {{ '★ 管理者' if participant.role == 'admin' else 'メンバー' }}
+                </span>
+              </div>
+            </div>
+          {% else %}
+            <p class="small">
+              参加しているメンバーはいません。
+            </p>
+          {% endfor %}
+        </div>
+      </section>
+
+      {% if not answer %}
+        <section class="card">
+          <details>
+            <summary>ニックネームを変更</summary>
+
+            <form
+              action="{{ url_for('nickname', gid=group.id) }}"
+              method="post"
+            >
+              {{ token() }}
+
+              <label>
+                ニックネーム
+                <input
+                  name="nickname"
+                  value="{{ group.nickname }}"
+                  maxlength="40"
+                  required
+                >
+              </label>
+
+              <button class="secondary">保存する</button>
+            </form>
+          </details>
+        </section>
+      {% endif %}
+
+      {% if group.role == 'admin' %}
+        <a
+          class="button secondary"
+          href="{{ url_for('admin', gid=group.id) }}"
+        >
+          グループの管理
+        </a>
+      {% endif %}
+
+    {% elif page == 'admin' %}
+
+      <a class="back" href="{{ url_for('group', gid=group.id) }}">
+        ← グループへ
+      </a>
+
+      <div class="intro">
+        <p class="eyebrow">GROUP SETTINGS</p>
+        <h1>{{ group.name }}の管理</h1>
+      </div>
+
+      <section class="card">
+        <h2>回答スケジュール</h2>
+
+        <form method="post">
+          {{ token() }}
+          <input type="hidden" name="action" value="settings">
+
+          <label>
+            締切（日本時間）
+            <input
+              type="time"
+              name="deadline"
+              value="{{ group.deadline }}"
+              required
+            >
+          </label>
+
+          <fieldset>
+            <legend>実施曜日</legend>
+
+            <div class="weekdays">
+              {% for day in weekdays %}
+                <label>
+                  <input
+                    type="checkbox"
+                    name="weekdays"
+                    value="{{ loop.index0 }}"
+                    {% if loop.index0|string in group.weekdays.split(',') %}
+                      checked
+                    {% endif %}
+                  >
+                  {{ day }}
+                </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+
+          <label>
+            休止日（1行に1日、YYYY-MM-DD）
+            <textarea
+              name="holidays"
+              placeholder="2026-10-12"
+            >{{ group.holidays }}</textarea>
+          </label>
+
+          <p class="small">
+            保存すると、全員に設定変更が通知されます。
+            曜日をすべて外すと毎日休止になります。
+          </p>
+
+          <button>設定を保存して通知</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>招待コード</h2>
+        <p class="code">{{ group.invite }}</p>
+
+        <p class="small">
+          有効期限：
+          {{ group.invite_until[:16].replace('T', ' ') }}
+          （日本時間）<br>
+          このコードをメンバーに伝えてください。
+        </p>
+
+        <form method="post">
+          {{ token() }}
+          <input type="hidden" name="action" value="invite">
+          <button class="secondary">
+            旧コードを無効にして再発行
+          </button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>メンバー管理</h2>
+
+        <p class="small">
+          除外するとそのメンバーの回答も削除されます。
+          再参加を防ぐ場合は招待コードも再発行してください。
+        </p>
+
+        {% for person in people %}
+          <article class="person">
+            <div class="row">
+              <strong>{{ person.nickname }}</strong>
+              <span>
+                {{ '管理者' if person.role == 'admin' else 'メンバー' }}
+              </span>
+            </div>
+
+            {% if person.role != 'admin' %}
+              <details>
+                <summary>このメンバーを除外</summary>
+
+                <form method="post">
+                  {{ token() }}
+                  <input type="hidden" name="action" value="remove">
+                  <input
+                    type="hidden"
+                    name="uid"
+                    value="{{ person.user_id }}"
+                  >
+
+                  <button class="danger">
+                    {{ person.nickname }}を除外する
+                  </button>
+                </form>
+              </details>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </section>
+
+    {% elif page == 'notifications' %}
+
+      <div class="intro">
+        <p class="eyebrow">NOTIFICATIONS</p>
+        <h1>お知らせ</h1>
+        <p>グループからの連絡を、ここに。</p>
+      </div>
+
+      {% if notices %}
+        <form method="post">
+          {{ token() }}
+          <button class="secondary">すべて既読にする</button>
+        </form>
+
+        {% for notice in notices %}
+          <article class="card">
+            <span class="badge">
+              {{ '既読' if notice.seen else '新着' }}
+            </span>
+            <p>{{ notice.message }}</p>
+            <small>
+              {{ notice.created[:16].replace('T', ' ') }}
+            </small>
+          </article>
+        {% endfor %}
+      {% else %}
+        <section class="card empty">
+          <p>まだお知らせはありません。</p>
+        </section>
+      {% endif %}
+
+    {% elif page == 'account' %}
+
+      <div class="intro">
+        <p class="eyebrow">MY ACCOUNT</p>
+        <h1>マイページ</h1>
+      </div>
+
+      <section class="card">
+        <h2>アカウント情報</h2>
+        <p>{{ g.user.email }}</p>
+        <p class="small">
+          名前はグループごとに設定できます。
+        </p>
+
+        <a href="{{ url_for('forgot') }}">
+          パスワードを再設定する
+        </a>
+
+        <form action="{{ url_for('logout') }}" method="post">
+          {{ token() }}
+          <button class="secondary">ログアウト</button>
+        </form>
+      </section>
+
+    {% endif %}
+  </main>
+
+  {% if g.user %}
+    <nav aria-label="メインナビゲーション">
+      <a
+        class="{{ 'active' if page == 'home' }}"
+        href="{{ url_for('index') }}"
+      >
+        <span>⌂</span>
+        ホーム
+      </a>
+
+      <a
+        class="{{ 'active' if page in ['groups', 'group', 'admin'] }}"
+        href="{{ url_for('groups') }}"
+      >
+        <span>☷</span>
+        グループ
+      </a>
+
+      <a
+        class="{{ 'active' if page == 'notifications' }}"
+        href="{{ url_for('notifications') }}"
+      >
+        <span>
+          ♧
+          {% if unread %}
+            <b>{{ unread }}</b>
+          {% endif %}
+        </span>
+        お知らせ
+      </a>
+
+      <a
+        class="{{ 'active' if page == 'account' }}"
+        href="{{ url_for('account') }}"
+      >
+        <span>○</span>
+        マイページ
+      </a>
+    </nav>
+  {% endif %}
+</body>
+</html>
